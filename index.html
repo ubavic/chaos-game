@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="canonical" href="https://ubavic.rs/chaos_game">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="Interactive simulation of the chaos game">
+    <meta name="author" content="Nikola Ubavić">
+    <title>Interactive chaos game</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+      <canvas id="canvas"></canvas>
+      <svg id="svg" version="1.1" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="info" >
+        <div>
+          <label for="number">Number of points</label>
+          <input id="number" type="number" min="1" max="20" />
+        </div>
+        <div>
+          <label for="color">Colors</label>
+          <input type="checkbox" id="color" name="color" checked>
+        </div>
+        <div id="lambda" class="coordinates"></div>
+        <div class="right-aligner"></div>
+        <div id="mouse" class="coordinates" title="Mouse coordinates"></div>
+        <div style="display: flex; flex-direction: row; gap: 10px">
+          <button onclick="downloadImage()">Download image</button>
+          <button onclick="showShare()">Share configuration</button>
+          <button onclick="showHelp()">Help</button>
+        </div>
+      </div>
+      <div id="help" class="popup">
+        <button style="float: right;" onclick="closeBackdrop()">Close</button>
+        <h1>Chaos game</h1>
+        <p>
+          This is an interactive demonstration of the dynamical system called <a href="https://en.wikipedia.org/wiki/Chaos_game">Chaos game</a>.
+          This game is "played" by following rules:
+        </p>
+        <ol>
+          <li>Fix polygon <var>Π</var></li>
+          <li>Pick a random point <var>P</var><sub>0</sub></li>
+          <li>Choose a random vertex <var>V</var> of the <var>Π</var></li>
+          <li>Set <var>P</var><sub><var>n</var>+1</sub> to the midpoint of the segment <var>P</var><sub><var>n</var></sub><var>V</var> [Note that the midpoint of the <var>P</var><sub><var>n</var></sub><var>V</var> has coordinates <var>λ</var>⋅(<var>P</var><sub><var>n</var></sub> + <var>V</var>), where <var>λ</var> = 0.5]</li>
+          <li>Go back to step 3 and repeat</li>
+        </ol>
+        <p>
+          By repeating steps 3 and 4, you will get a set of points {<var>P</var><sub>0</sub>, <var>P</var><sub>1</sub>, <var>P</var><sub>2</sub>, ...} which is called <em>orbit</em>.
+          What is interesting about this game, is that no matter what point you pick in the second step, you will get "the same" picture after enough iterations.
+        </p>
+        <p>
+          In this demonstration, all points are treated as complex numbers.
+          Also, the parameter <var>λ</var> is a complex number.
+          By varying the parameter <var>λ</var> we can get more interesting pictures.
+        </p>
+        <p>
+          Control vertices of the polygon and value <var>λ</var> by dragging dots.
+          Change the number of vertices with input at the bottom of screen.
+        </p>
+        <p>
+          If the <em>Color</em> option is selected, a point will be colored by the color of the vertex that was selected for that iteration.
+        </p>
+        <footer>Created by <a href="https://ubavic.rs/?lang=en">Nikola Ubavić</a> &bull;
+        2023 &bull;
+        Code available on <a href="https://github.com/ubavic/chaos-game">Github</a>.</footer>
+      </div>
+      <div id="share" class="popup" style="display: none;">
+        <a href=""></a><br>
+        <button style="margin: 1rem auto;" onclick="closeBackdrop()">Close</button>
+      </div>
+      <div id="backdrop" onclick="closeBackdrop();"></div>
+      <a id="dummy"></a>
+    <script src="script.js"></script>
+  </body>
+</html>
