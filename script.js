@@ -337,7 +337,7 @@ const parseURLAndInitPoints = () => {
 	let lx = 0.5, ly = 0;
 	let error = false
 
-	for (let i = 1; i < 20; i++) {
+	for (let i = 1; i <= 20; i++) {
 		if(sp.has(`x${i}`) && sp.has(`y${i}`)) {
 			const x = Number(sp.get(`x${i}`));
 			const y = Number(sp.get(`y${i}`));
