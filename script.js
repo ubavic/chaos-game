@@ -1,14 +1,37 @@
 let svg, cvs, ctx;
 let width, height, minDimension;
+let canvasData, pixels;
 let points = [];
 let scale = 2;
 let lambda;
 let color = true;
 let iterations = 20000;
 let clear = 0;
+let orbitX = 0.3;
+let orbitY = 0.2;
 
-const add = ([a, b], [c, d]) => ([a + c, b + d]);
-const mul = ([a, b], [c, d]) => ([a * c - b * d, a * d + b * c]);
+const packRGBA = (() => {
+	const buf = new ArrayBuffer(4);
+	const u32 = new Uint32Array(buf);
+	const u8 = new Uint8Array(buf);
+	u8[0] = 1;
+	u8[1] = 2;
+	u8[2] = 3;
+	u8[3] = 4;
+	const little = u32[0] === 0x04030201;
+	return little
+		? (r, g, b) => ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0
+		: (r, g, b) => ((r << 24) | (g << 16) | (b << 8) | 255) >>> 0;
+})();
+
+const hToRGB = h => {
+	const f = n => {
+		const k = (n + h / 30) % 12;
+		const channel = 0.8 - 0.16 * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+		return Math.round(255 * channel);
+	};
+	return [0, 8, 4].map(f);
+};
 
 const formatZ = ([x, y]) => {
 	const X = x >= 0 ? ` ${x.toFixed(2)}` : x.toFixed(2);
@@ -26,15 +49,6 @@ const toComplex = ([w, h]) => ([
 	-1 * (h - height / 2) * scale / minDimension,
 ]);
 
-const toCanvasIndex = z => {
-	const [w, h] = toScreen(z);
-	if (w > width || w < 0 || h > height || h < 0) {
-		return null
-	}
-
-	return 4 * (Math.floor(w) + Math.floor(h) * width);
-}
-
 class Point {
 	constructor(x, y, hue) {
 		this.x = x;
@@ -42,6 +56,7 @@ class Point {
 		this.id = (Math.random() * 1000000000).toFixed(0);
 		this.dragged = false;
 		this.hue = hue * 360;
+		this.updatePacked();
 		svg.appendChild(this.getHtml());
 	}
 
@@ -74,6 +89,16 @@ class Point {
 	label() {
 		const point = svg.getElementById(this.id);
 		point.setAttribute('fill', color ? `hsl(${this.hue}, 50%, 50%)` : '#DDD');
+		this.updatePacked();
+	}
+
+	updatePacked() {
+		if (color) {
+			const c = hToRGB(this.hue);
+			this.packed = packRGBA(c[0], c[1], c[2]);
+		} else {
+			this.packed = packRGBA(20, 20, 20);
+		}
 	}
 
 	dragStart(e, point) {
@@ -151,33 +176,48 @@ const refreshPoints = () => {
 }
 
 const draw = () => {
-	let z = [0.3, 0.2];
-
-	if (clear == 1) {
-		ctx.clearRect(0, 0, width, height);
+	if (clear === 1) {
+		pixels.fill(0);
+		orbitX = 0.3;
+		orbitY = 0.2;
 		clear = 0;
-	} else if (clear == 2) {
-		ctx.rect(0, 0, width, height);
-		ctx.fillStyle = "#FFF2";
-		ctx.fill();
 	}
 
-	canvasData = ctx.getImageData(0, 0, width, height);
-	for (let i = 0; i < 1000; i++) {
-		const p = points[Math.floor(Math.random() * points.length)];
-		z = mul(lambda.getCords(), add(p.getCords(), z));
-		const index = toCanvasIndex(z);
-
-		if (index !== null) {
-			const c = color ? hToRGB(p.hue) : [20, 20, 20];
-			canvasData.data[index] = c[0];
-			canvasData.data[index + 1] = c[1];
-			canvasData.data[index + 2] = c[2];
-			canvasData.data[index + 3] = 255;
+	const n = points.length;
+	if (n > 0) {
+		if (!Number.isFinite(orbitX) || !Number.isFinite(orbitY)) {
+			orbitX = 0.3;
+			orbitY = 0.2;
 		}
-	}
-	ctx.putImageData(canvasData, 0, 0);
 
+		const lx = lambda.x;
+		const ly = lambda.y;
+		const k = minDimension / scale;
+		const ox = width / 2;
+		const oy = height / 2;
+		let zx = orbitX;
+		let zy = orbitY;
+
+		for (let i = 0; i < iterations; i++) {
+			const p = points[(Math.random() * n) | 0];
+			const ax = p.x + zx;
+			const ay = p.y + zy;
+			zx = lx * ax - ly * ay;
+			zy = lx * ay + ly * ax;
+
+			const w = zx * k + ox;
+			const h = -zy * k + oy;
+			if (w < 0 || h < 0 || w >= width || h >= height) {
+				continue;
+			}
+			pixels[(w | 0) + ((h | 0) * width)] = p.packed;
+		}
+
+		orbitX = zx;
+		orbitY = zy;
+	}
+
+	ctx.putImageData(canvasData, 0, 0);
 	requestAnimationFrame(draw);
 }
 
@@ -188,6 +228,9 @@ const setCanvasDimensions = () => {
 	width = cvs.width;
 	height = cvs.height;
 	minDimension = Math.min(width, height);
+
+	canvasData = ctx.createImageData(width, height);
+	pixels = new Uint32Array(canvasData.data.buffer);
 }
 
 const setPoints = n => {
@@ -228,11 +271,11 @@ const setupCanvas = () => {
 	const drag = e => {
 		if (lambda.dragged) {
 			lambda.drag(e, lambda);
-			clear = 2;
+			clear = 1;
 		} else {
 			points.filter(p => p.dragged).map(p => {
 				p.drag(e, p);
-				clear = 2;
+				clear = 1;
 			})
 		}
 	}
@@ -281,15 +324,6 @@ const setupCanvas = () => {
 	})
 
 	draw();
-}
-
-const hToRGB = h => {
-	const f = n => {
-		const k = (n + h / 30) % 12;
-		const color = 0.8 - 0.16 * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-		return Math.round(255 * color);
-	};
-	return [0, 8, 4].map(f);
 }
 
 const parseURLAndInitPoints = () => {
@@ -382,4 +416,8 @@ const downloadImage = () => {
 	dummy.click();
 }
 
-window.onload = setupCanvas();
+if (document.readyState === 'complete') {
+	setupCanvas();
+} else {
+	window.addEventListener('load', setupCanvas);
+}
