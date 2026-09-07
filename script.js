@@ -7,8 +7,7 @@ let lambda;
 let color = true;
 let iterations = 20000;
 let clear = 0;
-let orbitX = 0.3;
-let orbitY = 0.2;
+let orbitX, orbitY;
 
 const packRGBA = (() => {
 	const buf = new ArrayBuffer(4);
@@ -48,6 +47,14 @@ const toComplex = ([w, h]) => ([
 	(w - width / 2) * scale / minDimension,
 	-1 * (h - height / 2) * scale / minDimension,
 ]);
+
+const randomInUnitDisc = () => {
+	const theta = Math.random() * 2 * Math.PI;
+	const r = Math.sqrt(Math.random());
+	return [r * Math.cos(theta), r * Math.sin(theta)];
+};
+
+[orbitX, orbitY] = randomInUnitDisc();
 
 class Point {
 	constructor(x, y, hue) {
@@ -178,16 +185,14 @@ const refreshPoints = () => {
 const draw = () => {
 	if (clear === 1) {
 		pixels.fill(0);
-		orbitX = 0.3;
-		orbitY = 0.2;
+		[orbitX, orbitY] = randomInUnitDisc();
 		clear = 0;
 	}
 
 	const n = points.length;
 	if (n > 0) {
 		if (!Number.isFinite(orbitX) || !Number.isFinite(orbitY)) {
-			orbitX = 0.3;
-			orbitY = 0.2;
+			[orbitX, orbitY] = randomInUnitDisc();
 		}
 
 		const lx = lambda.x;
